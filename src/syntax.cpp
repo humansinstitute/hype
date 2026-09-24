@@ -1,4 +1,5 @@
 #include "syntax.h"
+#include "toolpath.h"
 #include <QCache>
 #include <QMutex>
 #include <QProcess>
@@ -31,7 +32,7 @@ static QString highlightedHtml(const QString &source, QString language) {
         pending.insert(key);
     }
     QProcess process;
-    process.start("source-highlight", {"--src-lang=" + language, "--out-format=html-css"});
+    process.start(hypeTool("source-highlight"), {"--src-lang=" + language, "--out-format=html-css"});
     QString html;
     if (process.waitForStarted(1000)) {
         process.write(source.toUtf8());

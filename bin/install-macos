@@ -15,10 +15,24 @@ mkdir -p "$(dirname "$DESTINATION")"
 rm -rf "$DESTINATION"
 ditto "$ROOT/build/hype.app" "$DESTINATION"
 
+# Deploy only the install copy. macdeployqt rewrites Mach-O load commands, so
+# mutating build/hype.app would break CLI tests that copy its executable alone.
+MACDEPLOYQT="${MACDEPLOYQT:-/opt/homebrew/opt/qt/bin/macdeployqt}"
+if [ ! -x "$MACDEPLOYQT" ]; then
+    printf '%s\n' 'macdeployqt was not found. Install Qt 6 with Homebrew.' >&2
+    exit 1
+fi
+"$MACDEPLOYQT" "$DESTINATION" -qmldir="$ROOT/src" -always-overwrite
+
 # qmake's linker-generated ad-hoc signature does not seal the completed app
 # bundle. Re-sign the installed copy after every file is in place so dyld does
 # not terminate it with CODESIGNING/Invalid Page on launch.
-codesign --force --deep --sign - --timestamp=none "$DESTINATION"
+SIGNING_IDENTITY="${HYPE_SIGNING_IDENTITY:--}"
+if [ "$SIGNING_IDENTITY" = - ]; then
+    codesign --force --deep --sign - --timestamp=none "$DESTINATION"
+else
+    codesign --force --deep --options runtime --timestamp --sign "$SIGNING_IDENTITY" "$DESTINATION"
+fi
 codesign --verify --deep --strict --verbose=2 "$DESTINATION"
 
 printf 'Installed Hype at %s\n' "$DESTINATION"

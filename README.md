@@ -16,7 +16,7 @@ Then open **Hype** from the app launcher, or run `hype` in a terminal.
 
 ## Make a presentation
 
-Open Hype from your app launcher. It reopens your last presentation; use **Ctrl+N** to start a new one, or **Ctrl+O** to choose a Markdown file.
+Open Hype from your app launcher. It reopens your last presentation; use **Ctrl+N** (**⌘N** on macOS) to start a new one, or **Ctrl+O** (**⌘O** on macOS) to choose a Markdown file.
 
 In **Visual** mode, select a slide in the sidebar and write its Markdown below the preview. Changes appear as you type. Drag the divider to give the preview or editor more room. The mode button shows the current mode as a grid, slide, or `#` icon; click it to step through **Overview**, **Visual**, and **Markdown**. **Ctrl+M** flips the overview on and off, returning to the mode you came from, and **Ctrl+.** flips the Markdown source. Markdown mode edits the whole presentation, with the same formatting bar on top.
 
@@ -227,6 +227,10 @@ brew install qt ffmpeg source-highlight webp
 open "$HOME/Applications/Hype.app"
 ```
 
-The installed app still uses `ffmpeg` and `source-highlight` from Homebrew for video export and syntax highlighting. To run the command-line interface directly from the checkout, use `./build/hype.app/Contents/MacOS/hype` after `./bin/build`.
+The installed app contains its Qt, QML, multimedia and WebP dependencies. It discovers `ffmpeg` and `source-highlight` in the app resources, the shell path, `/opt/homebrew/bin`, or `/usr/local/bin`, so Finder launches work with Homebrew on both Apple Silicon and Intel Macs. To run the command-line interface directly from the checkout, use `./build/hype.app/Contents/MacOS/hype` after `./bin/build`.
 
-`install-macos` applies and verifies a local ad-hoc signature after copying the bundle. This is required because qmake's linker signature does not seal the finished application bundle.
+`install-macos` deploys the bundle, then applies and verifies a local ad-hoc signature. Set `HYPE_SIGNING_IDENTITY` to a Developer ID Application identity for hardened-runtime distribution signing. `./bin/package-macos` creates a DMG; setting `HYPE_NOTARY_PROFILE` submits it with an existing `notarytool` keychain profile and staples the accepted result. Credentials are never stored in this repository.
+
+Finder **Open With**, Dock drops, and `open -a Hype presentation.md` open Markdown presentations. Native Open, Save, Save As, media import, PDF export and PowerPoint export dialogs remember the current presentation folder.
+
+On macOS, standard shortcuts use Command. Hype-specific shortcuts avoid macOS system bindings: **⌥⌘O** toggles Overview, **⌥⌘M** toggles Markdown source, **⇧⌘P** presents, and **Option+Arrow** moves selected slides. Linux keeps the Ctrl shortcuts listed below.

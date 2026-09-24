@@ -97,6 +97,7 @@ class Deck : public QAbstractListModel {
     QString dialogDirectory() const;
     QString slide(int index) const;
     bool loadPath(const QString &path, bool remember = true);
+    Q_INVOKABLE bool openPath(const QString &path);
     bool reopenLastPresentation();
     bool savePath(const QString &path);
     bool saveCopyPath(const QString &path);

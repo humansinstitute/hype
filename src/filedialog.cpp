@@ -9,6 +9,7 @@
 #include <QDBusPendingReply>
 #include <QDir>
 #include <QFileInfo>
+#include <QFileDialog>
 #include <QScopeGuard>
 #include <QUrl>
 #include <QUuid>
@@ -36,6 +37,24 @@ const QDBusArgument &operator>>(const QDBusArgument &arg, Filter &filter) {
 
 QString FileDialog::choose(bool save, const QString &location, const QString &label,
                            const QStringList &patterns, QString *error) {
+#ifdef Q_OS_MACOS
+    if (!qEnvironmentVariableIsSet("HYPE_FORCE_PORTAL_DIALOG")) {
+        const QString filter = label + " (" + patterns.join(' ') + ")";
+        QString selected;
+        if (save) {
+            selected = QFileDialog::getSaveFileName(nullptr, "Save File", location, filter);
+            if (!selected.isEmpty() && QFileInfo(selected).suffix().isEmpty() && patterns.size() == 1) {
+                QString extension = patterns.first();
+                extension.remove('*');
+                selected += extension;
+            }
+        } else {
+            selected = QFileDialog::getOpenFileName(nullptr, "Open File", location, filter);
+        }
+        error->clear();
+        return selected;
+    }
+#endif
     qDBusRegisterMetaType<FilterRule>();
     qDBusRegisterMetaType<FilterRules>();
     qDBusRegisterMetaType<Filter>();

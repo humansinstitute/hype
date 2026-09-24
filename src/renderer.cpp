@@ -1,4 +1,5 @@
 #include "renderer.h"
+#include "toolpath.h"
 #include "images.h"
 #include "syntax.h"
 #include <QAbstractTextDocumentLayout>
@@ -256,7 +257,7 @@ static QString createPoster(const QString &video, const QString &base) {
     if (!poster.open()) return {};
     poster.close();
     QProcess ffmpeg;
-    ffmpeg.start("ffmpeg", {"-v", "error", "-y", "-i", video, "-frames:v", "1", "-vf",
+    ffmpeg.start(hypeTool("ffmpeg"), {"-v", "error", "-y", "-i", video, "-frames:v", "1", "-vf",
                             "scale=1280:-2", poster.fileName()});
     if (!ffmpeg.waitForFinished(30000) || ffmpeg.exitCode() != 0) {
         ffmpeg.kill();

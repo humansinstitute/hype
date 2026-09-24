@@ -1,0 +1,25 @@
+#!/bin/sh
+set -eu
+
+ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+DIST="${HYPE_DIST_DIR:-$ROOT/dist}"
+STAGE="$DIST/dmg-root"
+APP="$STAGE/Hype.app"
+DMG="$DIST/Hype-0.4.1-arm64.dmg"
+
+if [ "$(uname -s)" != Darwin ]; then
+    printf '%s\n' 'bin/package-macos is only for macOS.' >&2
+    exit 1
+fi
+
+mkdir -p "$DIST" "$STAGE"
+HYPE_APP_DESTINATION="$APP" "$ROOT/bin/install-macos"
+ln -sfn /Applications "$STAGE/Applications"
+hdiutil create -volname Hype -srcfolder "$STAGE" -ov -format UDZO "$DMG"
+
+if [ -n "${HYPE_NOTARY_PROFILE:-}" ]; then
+    xcrun notarytool submit "$DMG" --keychain-profile "$HYPE_NOTARY_PROFILE" --wait
+    xcrun stapler staple "$DMG"
+fi
+
+shasum -a 256 "$DMG"

@@ -1,9 +1,14 @@
-QT += core gui qml quick quickcontrols2 multimedia concurrent dbus
+QT += core gui qml quick quickcontrols2 multimedia concurrent dbus widgets
 # Like Qt's own modules, Hype never throws or catches. Without unwinding tables and with
 # link-time optimization, the installed binary is about a quarter smaller.
 CONFIG += c++17 release ltcg exceptions_off
 TARGET = hype
 TEMPLATE = app
+VERSION = 0.4.1
+QMAKE_TARGET_BUNDLE_PREFIX = com.humansinstitute
+QMAKE_MACOSX_DEPLOYMENT_TARGET = 15.0
+macx: QMAKE_INFO_PLIST = $$PWD/pkgbuild/Info.plist
+macx: ICON = $$PWD/pkgbuild/hype.icns
 HEADERS += src/deck.h src/renderer.h
 SOURCES += src/main.cpp src/deck.cpp src/renderer.cpp
 RESOURCES += src/resources.qrc

@@ -16,6 +16,13 @@ ApplicationWindow {
     readonly property int rounding: appTheme.rounding
     // Small controls soften only when the desktop theme rounds its windows.
     readonly property int softRadius: Math.min(3, rounding)
+    readonly property bool macOS: Qt.platform.os === "osx"
+    readonly property string commandName: macOS ? "Meta+" : "Ctrl+"
+    readonly property string commandLabel: macOS ? "⌘" : "Ctrl+"
+    readonly property string overviewShortcut: macOS ? "Meta+Alt+O" : "Ctrl+M"
+    readonly property string sourceShortcut: macOS ? "Meta+Alt+M" : "Ctrl+."
+    readonly property string presentShortcut: macOS ? "Meta+Shift+P" : "Ctrl+Space"
+    readonly property string moveModifier: macOS ? "Alt+" : "Ctrl+"
     color: presenting ? ui.background : ui.panel
     palette.window: win.ui.panel; palette.base: win.ui.background; palette.text: win.ui.foreground
     palette.placeholderText: win.ui.muted
@@ -50,7 +57,7 @@ ApplicationWindow {
     property bool editingSlide: false
     property bool presenting: false
     readonly property bool popupOpen: pasteDialog.visible || compressionDialog.visible ||
-        historyDialog.visible || closeDialog.visible || shortcutsOverlay.visible || themes.popup.visible || fonts.popup.visible ||
+        historyDialog.visible || aboutDialog.visible || closeDialog.visible || shortcutsOverlay.visible || themes.popup.visible || fonts.popup.visible ||
         slideMenu.visible || fileMenu.visible || slideBar.menuOpen || sourceBar.menuOpen
     property var compressionReturnFocus: null
     property bool allowClose: false
@@ -60,6 +67,54 @@ ApplicationWindow {
     property real dragY: 0
     property real dragX: 0
     property int dragScroll: 0
+    menuBar: MenuBar {
+        Menu {
+            title: qsTr("Hype")
+            MenuItem { text: qsTr("About Hype"); onTriggered: aboutDialog.open() }
+            MenuSeparator {}
+            MenuItem { text: qsTr("Quit Hype"); onTriggered: win.close() }
+        }
+        Menu {
+            title: qsTr("File")
+            MenuItem { text: qsTr("New Presentation"); onTriggered: deck.newDeck() }
+            MenuItem { text: qsTr("Open…"); onTriggered: deck.openDialog() }
+            MenuSeparator {}
+            MenuItem { text: qsTr("Save"); onTriggered: deck.save() }
+            MenuItem { text: qsTr("Save As…"); onTriggered: deck.saveAs() }
+            MenuSeparator {}
+            MenuItem { text: qsTr("Import Media…"); onTriggered: deck.importDialog() }
+            MenuItem { text: qsTr("Export as PDF…"); enabled: !deck.exporting; onTriggered: deck.exportDialog("pdf") }
+            MenuItem { text: qsTr("Export as PowerPoint…"); enabled: !deck.exporting; onTriggered: deck.exportDialog("pptx") }
+        }
+        Menu {
+            title: qsTr("Edit")
+            MenuItem { text: qsTr("Undo"); onTriggered: deck.undo() }
+            MenuItem { text: qsTr("Redo"); onTriggered: deck.redo() }
+        }
+        Menu {
+            title: qsTr("View")
+            MenuItem { text: qsTr("Overview"); checkable: true; checked: win.overview; onTriggered: win.toggleOverview() }
+            MenuItem { text: qsTr("Markdown Source"); checkable: true; checked: win.markdown; onTriggered: win.toggleSource() }
+        }
+        Menu {
+            title: qsTr("Slide")
+            MenuItem { text: qsTr("Add Slide"); onTriggered: win.addSlide() }
+            MenuItem { text: qsTr("Duplicate Slide"); onTriggered: deck.duplicateSlide() }
+            MenuItem { text: qsTr("Delete Slide"); onTriggered: deck.deleteSlide() }
+        }
+        Menu {
+            title: qsTr("Presentation")
+            MenuItem { text: win.presenting ? qsTr("Stop Presenting") : qsTr("Present"); onTriggered: win.togglePresent() }
+        }
+        Menu {
+            title: qsTr("Window")
+            MenuItem { text: qsTr("Minimize"); onTriggered: win.showMinimized() }
+        }
+        Menu {
+            title: qsTr("Help")
+            MenuItem { text: qsTr("Keyboard Shortcuts"); onTriggered: shortcutsOverlay.open() }
+        }
+    }
     function togglePresent() {
         presenting = !presenting
         if (presenting) { win.showFullScreen(); stage.forceActiveFocus() }
@@ -94,7 +149,7 @@ ApplicationWindow {
             event.accepted = true
             return
         }
-        let control = event.modifiers & Qt.ControlModifier
+        let control = event.modifiers & (win.macOS ? Qt.MetaModifier : Qt.ControlModifier)
         if (!win.markdown && editor === slideEditor && event.modifiers === Qt.NoModifier &&
             (event.key === Qt.Key_Home || event.key === Qt.Key_End)) {
             event.accepted = true
@@ -268,6 +323,11 @@ ApplicationWindow {
         }
     }
     Dialog {
+        id: aboutDialog; title: "About Hype"; modal: true; anchors.centerIn: parent
+        standardButtons: Dialog.Ok
+        Label { text: "Hype 0.4.1\nSimple presentations, written in Markdown."; horizontalAlignment: Text.AlignHCenter }
+    }
+    Dialog {
         id: closeDialog; title: "Unsaved changes"; modal: true; anchors.centerIn: parent
         standardButtons: Dialog.Discard | Dialog.Cancel
         Label { text: "Changes could not be backed up. Discard them and quit?" }
@@ -408,45 +468,45 @@ ApplicationWindow {
     Shortcut { enabled: !win.popupOpen && !deck.compressingImage; sequences: [StandardKey.Open]; onActivated: deck.openDialog() }
     Shortcut { enabled: !win.popupOpen && !deck.compressingImage; sequences: [StandardKey.Save]; onActivated: deck.save() }
     Shortcut { enabled: !win.popupOpen && !deck.compressingImage; sequences: [StandardKey.SaveAs]; onActivated: deck.saveAs() }
-    Shortcut { sequence: "Ctrl+E"; enabled: !win.popupOpen && !deck.compressingImage && !win.presenting && !deck.exporting; onActivated: deck.exportDialog("pdf") }
-    Shortcut { sequence: "Ctrl+Shift+E"; enabled: !win.popupOpen && !deck.compressingImage && !win.presenting && !deck.exporting; onActivated: deck.exportDialog("pptx") }
+    Shortcut { sequence: win.commandName + "E"; enabled: !win.popupOpen && !deck.compressingImage && !win.presenting && !deck.exporting; onActivated: deck.exportDialog("pdf") }
+    Shortcut { sequence: win.commandName + "Shift+E"; enabled: !win.popupOpen && !deck.compressingImage && !win.presenting && !deck.exporting; onActivated: deck.exportDialog("pptx") }
     Shortcut { sequences: ["?", "Shift+?"]; enabled: !win.popupOpen && !deck.compressingImage && !win.presenting && !slideEditor.activeFocus && !sourceEditor.activeFocus; onActivated: shortcutsOverlay.open() }
     Shortcut { sequence: "F1"; enabled: !win.popupOpen && !deck.compressingImage && !win.presenting; onActivated: shortcutsOverlay.open() }
-    Shortcut { sequence: "Ctrl+M"; enabled: !win.popupOpen && !deck.compressingImage && (!win.presenting); onActivated: win.toggleOverview() }
-    Shortcut { sequence: "Ctrl+."; enabled: !win.popupOpen && !deck.compressingImage && (!win.presenting); onActivated: win.toggleSource() }
-    Shortcut { sequence: "Ctrl+B"; enabled: win.canFormat; onActivated: win.formatSlide("bold") }
-    Shortcut { sequence: "Ctrl+I"; enabled: win.canFormat; onActivated: win.formatSlide("italic") }
-    Shortcut { sequence: "Ctrl+U"; enabled: win.canFormat; onActivated: win.formatSlide("underline") }
-    Shortcut { sequence: "Ctrl+H"; enabled: win.canFormat; onActivated: win.formatSlide("headline") }
-    Shortcut { sequence: "Ctrl+K"; enabled: win.canFormat; onActivated: win.formatSlide("code") }
-    Shortcut { sequence: "Ctrl+/"; enabled: win.canFormat; onActivated: win.formatSlide("comment") }
+    Shortcut { sequence: win.overviewShortcut; enabled: !win.popupOpen && !deck.compressingImage && (!win.presenting); onActivated: win.toggleOverview() }
+    Shortcut { sequence: win.sourceShortcut; enabled: !win.popupOpen && !deck.compressingImage && (!win.presenting); onActivated: win.toggleSource() }
+    Shortcut { sequences: [StandardKey.Bold]; enabled: win.canFormat; onActivated: win.formatSlide("bold") }
+    Shortcut { sequences: [StandardKey.Italic]; enabled: win.canFormat; onActivated: win.formatSlide("italic") }
+    Shortcut { sequences: [StandardKey.Underline]; enabled: win.canFormat; onActivated: win.formatSlide("underline") }
+    Shortcut { sequence: win.macOS ? "Meta+Shift+H" : "Ctrl+H"; enabled: win.canFormat; onActivated: win.formatSlide("headline") }
+    Shortcut { sequence: win.macOS ? "Meta+Shift+K" : "Ctrl+K"; enabled: win.canFormat; onActivated: win.formatSlide("code") }
+    Shortcut { sequence: win.commandName + "/"; enabled: win.canFormat; onActivated: win.formatSlide("comment") }
     Shortcut { sequences: ["Return", "Enter"]; enabled: !win.popupOpen && !deck.compressingImage && win.overview && !win.presenting; onActivated: win.focusMarkdown() }
-    Shortcut { enabled: !win.popupOpen && !deck.compressingImage; sequence: "Ctrl+N"; onActivated: deck.newDeck() }
-    Shortcut { enabled: !win.popupOpen && !deck.compressingImage; sequences: ["F5", "Ctrl+Space"]; autoRepeat: false; onActivated: win.togglePresent() }
+    Shortcut { enabled: !win.popupOpen && !deck.compressingImage; sequences: [StandardKey.New]; onActivated: deck.newDeck() }
+    Shortcut { enabled: !win.popupOpen && !deck.compressingImage; sequences: ["F5", win.presentShortcut]; autoRepeat: false; onActivated: win.togglePresent() }
     Shortcut { sequence: "Escape"; enabled: !win.popupOpen && !deck.compressingImage && (win.presenting); onActivated: win.togglePresent() }
-    Shortcut { sequence: "Ctrl+Z"; enabled: !win.popupOpen && !deck.compressingImage && (!slideEditor.activeFocus && !sourceEditor.activeFocus); onActivated: deck.undo() }
-    Shortcut { sequence: "Ctrl+Shift+Z"; enabled: !win.popupOpen && !deck.compressingImage && (!slideEditor.activeFocus && !sourceEditor.activeFocus); onActivated: deck.redo() }
-    Shortcut { sequence: "Ctrl+D"; enabled: !win.popupOpen && !deck.compressingImage && (!slideEditor.activeFocus && !sourceEditor.activeFocus); onActivated: deck.duplicateSlide() }
-    Shortcut { enabled: !win.popupOpen && !deck.compressingImage; sequence: "Ctrl+Return"; onActivated: { win.addSlide() } }
+    Shortcut { sequences: [StandardKey.Undo]; enabled: !win.popupOpen && !deck.compressingImage && (!slideEditor.activeFocus && !sourceEditor.activeFocus); onActivated: deck.undo() }
+    Shortcut { sequences: [StandardKey.Redo]; enabled: !win.popupOpen && !deck.compressingImage && (!slideEditor.activeFocus && !sourceEditor.activeFocus); onActivated: deck.redo() }
+    Shortcut { sequence: win.commandName + "D"; enabled: !win.popupOpen && !deck.compressingImage && (!slideEditor.activeFocus && !sourceEditor.activeFocus); onActivated: deck.duplicateSlide() }
+    Shortcut { enabled: !win.popupOpen && !deck.compressingImage; sequence: win.commandName + "Return"; onActivated: { win.addSlide() } }
     Shortcut { sequence: "Delete"; enabled: !win.popupOpen && !deck.compressingImage && (!slideEditor.activeFocus && !sourceEditor.activeFocus); onActivated: deck.deleteSlide() }
     Shortcut { sequence: "Right"; enabled: !win.popupOpen && !deck.compressingImage && (win.presenting || (!slideEditor.activeFocus && !sourceEditor.activeFocus)); onActivated: deck.select(deck.selected + 1) }
-    Shortcut { sequence: "Ctrl+Right"; enabled: !win.popupOpen && !deck.compressingImage && !win.presenting && !slideEditor.activeFocus && !sourceEditor.activeFocus; onActivated: win.moveSlides(1) }
+    Shortcut { sequence: win.moveModifier + "Right"; enabled: !win.popupOpen && !deck.compressingImage && !win.presenting && !slideEditor.activeFocus && !sourceEditor.activeFocus; onActivated: win.moveSlides(1) }
     Shortcut { sequence: "Shift+Right"; enabled: !win.popupOpen && !deck.compressingImage && !win.presenting && !slideEditor.activeFocus && !sourceEditor.activeFocus; onActivated: { deck.extendSelection(deck.selected + 1); if (win.markdown) win.alignSource(false) } }
     Shortcut { sequence: "Down"; enabled: !win.popupOpen && !deck.compressingImage && (win.presenting || (!slideEditor.activeFocus && !sourceEditor.activeFocus)); onActivated: deck.select(deck.selected + (win.presenting ? 1 : win.rowStep)) }
-    Shortcut { sequence: "Ctrl+Down"; enabled: !win.popupOpen && !deck.compressingImage && !win.presenting && !slideEditor.activeFocus && !sourceEditor.activeFocus; onActivated: win.moveSlides(win.rowStep) }
+    Shortcut { sequence: win.moveModifier + "Down"; enabled: !win.popupOpen && !deck.compressingImage && !win.presenting && !slideEditor.activeFocus && !sourceEditor.activeFocus; onActivated: win.moveSlides(win.rowStep) }
     Shortcut { sequence: "Shift+Down"; enabled: !win.popupOpen && !deck.compressingImage && !win.presenting && !slideEditor.activeFocus && !sourceEditor.activeFocus; onActivated: { deck.extendSelection(deck.selected + win.rowStep); if (win.markdown) win.alignSource(false) } }
     Shortcut { sequence: "Left"; enabled: !win.popupOpen && !deck.compressingImage && (win.presenting || (!slideEditor.activeFocus && !sourceEditor.activeFocus)); onActivated: deck.select(deck.selected + -1) }
-    Shortcut { sequence: "Ctrl+Left"; enabled: !win.popupOpen && !deck.compressingImage && !win.presenting && !slideEditor.activeFocus && !sourceEditor.activeFocus; onActivated: win.moveSlides(-1) }
+    Shortcut { sequence: win.moveModifier + "Left"; enabled: !win.popupOpen && !deck.compressingImage && !win.presenting && !slideEditor.activeFocus && !sourceEditor.activeFocus; onActivated: win.moveSlides(-1) }
     Shortcut { sequence: "Shift+Left"; enabled: !win.popupOpen && !deck.compressingImage && !win.presenting && !slideEditor.activeFocus && !sourceEditor.activeFocus; onActivated: { deck.extendSelection(deck.selected + -1); if (win.markdown) win.alignSource(false) } }
     Shortcut { sequence: "Up"; enabled: !win.popupOpen && !deck.compressingImage && (win.presenting || (!slideEditor.activeFocus && !sourceEditor.activeFocus)); onActivated: deck.select(deck.selected + (win.presenting ? -1 : -win.rowStep)) }
-    Shortcut { sequence: "Ctrl+Up"; enabled: !win.popupOpen && !deck.compressingImage && !win.presenting && !slideEditor.activeFocus && !sourceEditor.activeFocus; onActivated: win.moveSlides(-win.rowStep) }
+    Shortcut { sequence: win.moveModifier + "Up"; enabled: !win.popupOpen && !deck.compressingImage && !win.presenting && !slideEditor.activeFocus && !sourceEditor.activeFocus; onActivated: win.moveSlides(-win.rowStep) }
     Shortcut { sequence: "Shift+Up"; enabled: !win.popupOpen && !deck.compressingImage && !win.presenting && !slideEditor.activeFocus && !sourceEditor.activeFocus; onActivated: { deck.extendSelection(deck.selected + -win.rowStep); if (win.markdown) win.alignSource(false) } }
     Shortcut { sequence: "PgDown"; enabled: !win.popupOpen && !deck.compressingImage && (win.presenting || (!slideEditor.activeFocus && !sourceEditor.activeFocus)); onActivated: deck.select(deck.selected + 5 * win.rowStep) }
     Shortcut { sequence: "PgUp"; enabled: !win.popupOpen && !deck.compressingImage && (win.presenting || (!slideEditor.activeFocus && !sourceEditor.activeFocus)); onActivated: deck.select(deck.selected - 5 * win.rowStep) }
     Shortcut { sequence: "Home"; enabled: !win.popupOpen && !deck.compressingImage && (win.presenting || (!win.markdown && !slideEditor.activeFocus)); onActivated: deck.select(0) }
     Shortcut { sequence: "End"; enabled: !win.popupOpen && !deck.compressingImage && (win.presenting || (!win.markdown && !slideEditor.activeFocus)); onActivated: deck.select(deck.count - 1) }
     Shortcut { sequence: "Space"; enabled: !win.popupOpen && !deck.compressingImage && win.presenting && (deck.media.video || animation.active); autoRepeat: false; onActivated: { if (animation.item) animation.item.paused = !animation.item.paused; else win.toggleVideo() } }
-    Shortcut { sequence: "Ctrl+V"; enabled: !win.popupOpen && !deck.compressingImage && (!slideEditor.activeFocus && !sourceEditor.activeFocus); onActivated: deck.pasteMedia() }
+    Shortcut { sequences: [StandardKey.Paste]; enabled: !win.popupOpen && !deck.compressingImage && (!slideEditor.activeFocus && !sourceEditor.activeFocus); onActivated: deck.pasteMedia() }
     component ToolbarIconButton: ToolButton {
         id: toolbarButton
         required property string iconName
@@ -600,12 +660,12 @@ ApplicationWindow {
         }
         RowLayout {
             anchors.fill: parent; anchors.leftMargin: editorBar.textInset - 10; anchors.rightMargin: 14; spacing: 2
-            EditorButton { compact: editorBar.compact; objectName: editorBar.scope + "boldButton"; iconName: "bold"; label: "Bold"; description: "Bold (Ctrl+B)"; onClicked: win.formatSlide("bold") }
-            EditorButton { compact: editorBar.compact; objectName: editorBar.scope + "italicButton"; iconName: "italic"; label: "Italic"; description: "Italic (Ctrl+I)"; onClicked: win.formatSlide("italic") }
-            EditorButton { compact: editorBar.compact; objectName: editorBar.scope + "underlineButton"; iconName: "underline"; label: "Underline"; description: "Underline (Ctrl+U)"; onClicked: win.formatSlide("underline") }
-            EditorButton { compact: editorBar.compact; objectName: editorBar.scope + "headlineButton"; iconName: "headline"; label: "Headline"; description: "Headline (Ctrl+H)"; onClicked: win.formatSlide("headline") }
-            EditorButton { compact: editorBar.compact; objectName: editorBar.scope + "codeButton"; iconName: "code"; label: "Code"; description: "Code block (Ctrl+K)"; onClicked: win.formatSlide("code") }
-            EditorButton { compact: editorBar.compact; objectName: editorBar.scope + "commentButton"; iconName: "comment"; label: "Note"; description: "Comment, hidden on slide (Ctrl+/)"; onClicked: win.formatSlide("comment") }
+            EditorButton { compact: editorBar.compact; objectName: editorBar.scope + "boldButton"; iconName: "bold"; label: "Bold"; description: "Bold (" + win.commandLabel + "B)"; onClicked: win.formatSlide("bold") }
+            EditorButton { compact: editorBar.compact; objectName: editorBar.scope + "italicButton"; iconName: "italic"; label: "Italic"; description: "Italic (" + win.commandLabel + "I)"; onClicked: win.formatSlide("italic") }
+            EditorButton { compact: editorBar.compact; objectName: editorBar.scope + "underlineButton"; iconName: "underline"; label: "Underline"; description: "Underline (" + win.commandLabel + "U)"; onClicked: win.formatSlide("underline") }
+            EditorButton { compact: editorBar.compact; objectName: editorBar.scope + "headlineButton"; iconName: "headline"; label: "Headline"; description: "Headline (" + (win.macOS ? "⇧⌘H" : "Ctrl+H") + ")"; onClicked: win.formatSlide("headline") }
+            EditorButton { compact: editorBar.compact; objectName: editorBar.scope + "codeButton"; iconName: "code"; label: "Code"; description: "Code block (" + (win.macOS ? "⇧⌘K" : "Ctrl+K") + ")"; onClicked: win.formatSlide("code") }
+            EditorButton { compact: editorBar.compact; objectName: editorBar.scope + "commentButton"; iconName: "comment"; label: "Note"; description: "Comment, hidden on slide (" + win.commandLabel + "/)"; onClicked: win.formatSlide("comment") }
             Item { Layout.fillWidth: true }
             EditorButton { compact: editorBar.compact; iconName: "media-add"; label: "Media"; description: "Add image / video"; onClicked: deck.importDialog() }
             EditorButton {
@@ -768,7 +828,7 @@ ApplicationWindow {
             ToolbarIconButton {
                 objectName: "modeButton"
                 iconName: win.mode
-                description: (win.overview ? "Overview · Switch to Visual" : win.markdown ? "Markdown · Switch to Overview" : "Visual · Switch to Markdown") + "  ·  Ctrl+M overview, Ctrl+. source"
+                description: (win.overview ? "Overview · Switch to Visual" : win.markdown ? "Markdown · Switch to Overview" : "Visual · Switch to Markdown") + (win.macOS ? "  ·  ⌥⌘O overview, ⌥⌘M source" : "  ·  Ctrl+M overview, Ctrl+. source")
                 onClicked: win.cycleMode(1)
             }
             ToolbarIconButton {
@@ -778,20 +838,20 @@ ApplicationWindow {
                 AppMenu {
                     id: fileMenu; objectName: "fileMenu"
                     y: parent.height + 4
-                    AppMenuItem { text: "New presentation"; hint: "Ctrl+N"; onTriggered: deck.newDeck() }
-                    AppMenuItem { text: "Open…"; hint: "Ctrl+O"; onTriggered: deck.openDialog() }
+                    AppMenuItem { text: "New presentation"; hint: win.commandLabel + "N"; onTriggered: deck.newDeck() }
+                    AppMenuItem { text: "Open…"; hint: win.commandLabel + "O"; onTriggered: deck.openDialog() }
                     AppMenuSeparator {}
-                    AppMenuItem { text: deck.dirty ? "Save changes" : "Save"; hint: "Ctrl+S"; onTriggered: deck.save() }
-                    AppMenuItem { text: "Save as…"; hint: "Ctrl+Shift+S"; onTriggered: deck.saveAs() }
+                    AppMenuItem { text: deck.dirty ? "Save changes" : "Save"; hint: win.commandLabel + "S"; onTriggered: deck.save() }
+                    AppMenuItem { text: "Save as…"; hint: win.macOS ? "⇧⌘S" : "Ctrl+Shift+S"; onTriggered: deck.saveAs() }
                     AppMenuSeparator {}
-                    AppMenuItem { text: "Export as PDF…"; hint: "Ctrl+E"; enabled: !deck.exporting; onTriggered: deck.exportDialog("pdf") }
-                    AppMenuItem { text: "Export as PowerPoint…"; hint: "Ctrl+Shift+E"; enabled: !deck.exporting; onTriggered: deck.exportDialog("pptx") }
+                    AppMenuItem { text: "Export as PDF…"; hint: win.commandLabel + "E"; enabled: !deck.exporting; onTriggered: deck.exportDialog("pdf") }
+                    AppMenuItem { text: "Export as PowerPoint…"; hint: win.macOS ? "⇧⌘E" : "Ctrl+Shift+E"; enabled: !deck.exporting; onTriggered: deck.exportDialog("pptx") }
                     AppMenuSeparator {}
                     AppMenuItem { text: "Version history…"; onTriggered: historyDialog.open() }
                 }
             }
             ToolbarIconButton {
-                objectName: "presentButton"; iconName: "present"; description: "Present (Ctrl+Space)"; primary: true
+                objectName: "presentButton"; iconName: "present"; description: win.macOS ? "Present (⇧⌘P)" : "Present (Ctrl+Space)"; primary: true
                 onClicked: win.togglePresent()
             }
         }
@@ -805,22 +865,22 @@ ApplicationWindow {
         background: Rectangle { color: Qt.alpha(win.ui.panel, 0.92); border.color: win.ui.windowBorder; border.width: 2; radius: win.rounding }
         readonly property var groups: [
             { title: "Presentation", keys: [
-                ["Ctrl+N", "New presentation"], ["Ctrl+O", "Open"], ["Ctrl+S", "Save"], ["Ctrl+Shift+S", "Save as"],
-                ["Ctrl+E", "Export as PDF"], ["Ctrl+Shift+E", "Export as PowerPoint"], ["Ctrl+Space / F5", "Present"], ["Esc", "Stop presenting"],
+                [win.commandLabel + "N", "New presentation"], [win.commandLabel + "O", "Open"], [win.commandLabel + "S", "Save"], [win.macOS ? "⇧⌘S" : "Ctrl+Shift+S", "Save as"],
+                [win.commandLabel + "E", "Export as PDF"], [win.macOS ? "⇧⌘E" : "Ctrl+Shift+E", "Export as PowerPoint"], [win.macOS ? "⇧⌘P / F5" : "Ctrl+Space / F5", "Present"], ["Esc", "Stop presenting"],
                 ["Space", "Play or pause video while presenting"] ] },
             { title: "View", keys: [
-                ["Ctrl+M", "Overview on or off"], ["Ctrl+.", "Markdown source on or off"],
+                [win.macOS ? "⌥⌘O" : "Ctrl+M", "Overview on or off"], [win.macOS ? "⌥⌘M" : "Ctrl+.", "Markdown source on or off"],
                 ["Tab", "Switch between slides and editor"], ["Enter", "Open slide from Overview"],
                 ["? / F1", "Show these shortcuts"] ] },
             { title: "Slides", keys: [
                 ["Arrows", "Previous or next slide, by row in Overview"], ["Page Up / Page Down", "Jump five slides, or five rows in Overview"],
                 ["Home / End", "First or last slide"], ["Shift+Arrows", "Extend the selection"],
-                ["Ctrl+Arrows", "Move selected slides"], ["Ctrl+Enter", "Add a slide"],
-                ["Ctrl+D", "Duplicate"], ["Delete", "Delete"] ] },
+                [win.macOS ? "Option+Arrows" : "Ctrl+Arrows", "Move selected slides"], [win.commandLabel + "Enter", "Add a slide"],
+                [win.commandLabel + "D", "Duplicate"], ["Delete", "Delete"] ] },
             { title: "Editing", keys: [
-                ["Ctrl+B", "Bold"], ["Ctrl+I", "Italic"], ["Ctrl+U", "Underline"], ["Ctrl+H", "Headline"], ["Ctrl+K", "Code block"],
-                ["Ctrl+/", "Comment, hidden on slide"],
-                ["Ctrl+Z", "Undo"], ["Ctrl+Shift+Z", "Redo"], ["Ctrl+V", "Paste text, or add and name media"] ] }
+                [win.commandLabel + "B", "Bold"], [win.commandLabel + "I", "Italic"], [win.commandLabel + "U", "Underline"], [win.macOS ? "⇧⌘H" : "Ctrl+H", "Headline"], [win.macOS ? "⇧⌘K" : "Ctrl+K", "Code block"],
+                [win.commandLabel + "/", "Comment, hidden on slide"],
+                [win.commandLabel + "Z", "Undo"], [win.macOS ? "⇧⌘Z" : "Ctrl+Shift+Z", "Redo"], [win.commandLabel + "V", "Paste text, or add and name media"] ] }
         ]
         contentItem: ColumnLayout {
             spacing: 22; focus: true
@@ -853,8 +913,8 @@ ApplicationWindow {
     }
     // Shared by the sidebar and the overview, so it cannot live inside either.
     AppMenu { id: slideMenu
-        AppMenuItem { text: "New slide after this"; hint: "Ctrl+Enter"; onTriggered: { win.addSlide() } }
-        AppMenuItem { text: deck.selectionCount > 1 ? "Duplicate slides" : "Duplicate slide"; hint: "Ctrl+D"; onTriggered: deck.duplicateSlide() }
+        AppMenuItem { text: "New slide after this"; hint: win.commandLabel + "Enter"; onTriggered: { win.addSlide() } }
+        AppMenuItem { text: deck.selectionCount > 1 ? "Duplicate slides" : "Duplicate slide"; hint: win.commandLabel + "D"; onTriggered: deck.duplicateSlide() }
         AppMenuSeparator {}
         AppMenuItem { text: deck.selectionCount > 1 ? "Delete slides" : "Delete slide"; hint: "Del"; destructive: true; onTriggered: deck.deleteSlide() }
     }

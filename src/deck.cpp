@@ -673,6 +673,12 @@ bool Deck::loadPath(const QString &path, bool remember) {
         checkpoint();
     return true;
 }
+bool Deck::openPath(const QString &path) {
+    if (!confirmDiscard()) return false;
+    const bool opened = loadPath(path);
+    if (opened) emit this->opened(true);
+    return opened;
+}
 bool Deck::validateStructure(const QString &operation) {
     const auto parsed = parseDeck(m_source);
     bool sameSlides = parsed.slides.size() == count();
@@ -760,8 +766,7 @@ void Deck::openDialog() {
     QString error;
     const QString p = FileDialog::choose(false, dialogDirectory(), "Markdown", {"*.md"}, &error);
     if (!error.isEmpty()) setStatus(error);
-    if (!p.isEmpty() && loadPath(p))
-        emit opened(true);
+    if (!p.isEmpty()) openPath(p);
 }
 void Deck::save() {
     if (!m_recoveryDirectory.isEmpty() && !checkpoint())

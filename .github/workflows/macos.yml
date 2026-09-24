@@ -1,0 +1,15 @@
+name: macOS
+on:
+  push:
+  pull_request:
+jobs:
+  build-and-test:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install qt ffmpeg source-highlight webp
+      - run: ./bin/test
+      - run: ./bin/install-macos
+        env:
+          HYPE_APP_DESTINATION: ${{ runner.temp }}/Hype.app
+      - run: codesign --verify --deep --strict --verbose=2 "${{ runner.temp }}/Hype.app"

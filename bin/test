@@ -26,4 +26,4 @@ if [ -x ./hype-tests.app/Contents/MacOS/hype-tests ]; then
 else
     TEST_BINARY=./hype-tests
 fi
-QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic QT_STYLE_OVERRIDE=Fusion "$TEST_BINARY" "$@"
+HYPE_FORCE_PORTAL_DIALOG=1 QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic QT_STYLE_OVERRIDE=Fusion "$TEST_BINARY" "$@"

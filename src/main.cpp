@@ -2,7 +2,7 @@
 #include "cli.h"
 #include "deck.h"
 #include "renderer.h"
-#include <QGuiApplication>
+#include <QApplication>
 #include <QCommandLineParser>
 #include <QDBusConnection>
 #include <QDBusMessage>
@@ -17,13 +17,16 @@
 #include <QQuickWindow>
 #include <QScopeGuard>
 #include <QTimer>
+#include <QFileOpenEvent>
 #include <cstdio>
+#include <functional>
 #ifdef Q_OS_MACOS
 #include <unistd.h>
 #endif
 // The desktop's interface font, e.g. "Adwaita Sans 11", which the gtk3 platform
 // theme used to supply. Without a settings portal Qt's default font stays.
 static void adoptDesktopFont() {
+#ifdef Q_OS_LINUX
     auto call = QDBusMessage::createMethodCall("org.freedesktop.portal.Desktop", "/org/freedesktop/portal/desktop",
                                                "org.freedesktop.portal.Settings", "ReadOne");
     call.setArguments({"org.gnome.desktop.interface", "font-name"});
@@ -36,7 +39,27 @@ static void adoptDesktopFont() {
     QFont font(name.left(space));
     font.setPointSizeF(size);
     QGuiApplication::setFont(font);
+#endif
 }
+
+class DocumentApplication : public QApplication {
+  public:
+    using QApplication::QApplication;
+    std::function<void(const QString &)> openDocument;
+    QStringList pendingDocuments;
+  protected:
+    bool event(QEvent *event) override {
+        if (event->type() == QEvent::FileOpen) {
+            const QString path = static_cast<QFileOpenEvent *>(event)->file();
+            if (!path.isEmpty()) {
+                if (openDocument) openDocument(path);
+                else pendingDocuments << path;
+            }
+            return true;
+        }
+        return QApplication::event(event);
+    }
+};
 int main(int argc, char **argv) {
     // Hype themes itself. Qt's gtk3 platform theme only adds a use-after-free
     // inside GTK when the desktop theme changes under a running editor.
@@ -47,7 +70,7 @@ int main(int argc, char **argv) {
     // bundle without arguments and without a terminal, which should open the
     // editor just like an explicit `hype open` command.
 #ifdef Q_OS_MACOS
-    const bool appBundleLaunch = argc == 1 && !isatty(STDOUT_FILENO);
+    const bool appBundleLaunch = argc == 1 && qEnvironmentVariableIsSet("__CFBundleIdentifier");
 #else
     const bool appBundleLaunch = false;
 #endif
@@ -59,10 +82,13 @@ int main(int argc, char **argv) {
             windowless = windowless || argument.startsWith(option);
         windowless = windowless || argument == "-h" || argument == "-v";
     }
+#ifndef Q_OS_MACOS
     if (windowless)
         qputenv("QT_QPA_PLATFORM", "offscreen");
-    QGuiApplication app(argc, argv);
-    app.setApplicationName("hype");
+#endif
+    DocumentApplication app(argc, argv);
+    app.setApplicationName("Hype");
+    app.setOrganizationName("Humans Institute");
     app.setApplicationVersion("0.4.1");
     app.setDesktopFileName(qEnvironmentVariable("HYPE_DESKTOP_FILE", "hype"));
     if (command)
@@ -89,6 +115,12 @@ int main(int argc, char **argv) {
         arguments.removeAt(1);
     args.process(arguments);
     Deck deck;
+    app.openDocument = [&deck](const QString &path) {
+        deck.openPath(path);
+    };
+    for (const QString &path : std::as_const(app.pendingDocuments))
+        app.openDocument(path);
+    app.pendingDocuments.clear();
     const bool exportWorker = args.isSet(snapshotOption);
     auto report = [](const QJsonObject &event) {
         const auto line = QJsonDocument(event).toJson(QJsonDocument::Compact);
@@ -166,6 +198,13 @@ int main(int argc, char **argv) {
     engine.load(QUrl("qrc:/Main.qml"));
     if (engine.rootObjects().isEmpty())
         return 1;
+    auto window = qobject_cast<QQuickWindow *>(engine.rootObjects().first());
+    auto updateWindowDocument = [window, &deck] {
+        if (!window) return;
+        window->setFilePath(deck.path());
+    };
+    QObject::connect(&deck, &Deck::changed, &app, updateWindowDocument);
+    updateWindowDocument();
     if (args.isSet("markdown"))
         QMetaObject::invokeMethod(engine.rootObjects().first(), "openMarkdown");
     if (args.isSet("overview"))

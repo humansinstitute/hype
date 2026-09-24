@@ -1,4 +1,5 @@
 #include "pptx.h"
+#include "toolpath.h"
 #include "renderer.h"
 #include <QBuffer>
 #include <QDataStream>
@@ -438,7 +439,7 @@ QString preparePowerPointVideo(const QString &source, const QString &output, QSt
         return source;
     const double duration = info["format"].toObject()["duration"].toString().toDouble();
     QProcess encoder;
-    encoder.start("ffmpeg", {"-v", "error", "-nostdin", "-y", "-i", source,
+    encoder.start(hypeTool("ffmpeg"), {"-v", "error", "-nostdin", "-y", "-i", source,
         "-map", "0:v:0", "-map", "0:a:0?", "-c:v", "libx264", "-preset", "fast", "-crf", "18",
         "-threads", "2", "-vf", "pad=ceil(iw/2)*2:ceil(ih/2)*2", "-pix_fmt", "yuv420p",
         "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", "-progress", "pipe:1", output});

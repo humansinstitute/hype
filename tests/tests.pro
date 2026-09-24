@@ -2,6 +2,7 @@ QT += core gui qml quick quickcontrols2 multimedia widgets testlib pdf concurren
 CONFIG += c++17 testcase
 TEMPLATE = app
 TARGET = hype-tests
+macx: QMAKE_MACOSX_DEPLOYMENT_TARGET = 15.0
 INCLUDEPATH += ../src
 SOURCES += tests.cpp ../src/deck.cpp ../src/renderer.cpp
 HEADERS += ../src/deck.h ../src/renderer.h
