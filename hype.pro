@@ -14,6 +14,14 @@ SOURCES += src/pptx.cpp
 HEADERS += src/pptx.h
 LIBS += -lz -lwebpdemux -lwebp
 
+macx {
+    WEBP_PREFIX = $$system(brew --prefix webp 2>/dev/null)
+    !isEmpty(WEBP_PREFIX) {
+        INCLUDEPATH += $$WEBP_PREFIX/include
+        LIBS += -L$$WEBP_PREFIX/lib
+    }
+}
+
 SOURCES += src/animationexport.cpp
 HEADERS += src/animationexport.h
 

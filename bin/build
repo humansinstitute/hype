@@ -3,5 +3,27 @@ set -eu
 ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 mkdir -p "$ROOT/build"
 cd "$ROOT/build"
-qmake6 "$ROOT/hype.pro"
-make -j"$(nproc)"
+
+if command -v qmake6 >/dev/null 2>&1; then
+    QMAKE=qmake6
+elif [ -x /opt/homebrew/opt/qt/bin/qmake6 ]; then
+    QMAKE=/opt/homebrew/opt/qt/bin/qmake6
+else
+    printf '%s\n' 'qmake6 was not found. Install Qt 6 and add its bin directory to PATH.' >&2
+    exit 1
+fi
+
+if command -v nproc >/dev/null 2>&1; then
+    JOBS="$(nproc)"
+else
+    JOBS="$(sysctl -n hw.logicalcpu 2>/dev/null || printf '1')"
+fi
+
+"$QMAKE" "$ROOT/hype.pro"
+make -j"$JOBS"
+
+# qmake produces an application bundle on macOS. Keep the same build/hype CLI
+# path used by the test suite and documentation on Linux.
+if [ -x "$ROOT/build/hype.app/Contents/MacOS/hype" ]; then
+    ln -sf hype.app/Contents/MacOS/hype "$ROOT/build/hype"
+fi

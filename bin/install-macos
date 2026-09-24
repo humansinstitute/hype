@@ -1,0 +1,19 @@
+#!/bin/sh
+set -eu
+
+ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+DESTINATION="${HYPE_APP_DESTINATION:-$HOME/Applications/Hype.app}"
+
+if [ "$(uname -s)" != Darwin ]; then
+    printf '%s\n' 'bin/install-macos is only for macOS.' >&2
+    exit 1
+fi
+
+"$ROOT/bin/build"
+
+mkdir -p "$(dirname "$DESTINATION")"
+rm -rf "$DESTINATION"
+ditto "$ROOT/build/hype.app" "$DESTINATION"
+
+printf 'Installed Hype at %s\n' "$DESTINATION"
+printf 'Launch it with: open %s\n' "$(printf '%s' "$DESTINATION" | sed "s/'/'\\\\''/g; s/^/'/; s/$/'/")"

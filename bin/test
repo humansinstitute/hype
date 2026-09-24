@@ -3,6 +3,27 @@ set -eu
 ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 mkdir -p "$ROOT/build/tests"
 cd "$ROOT/build/tests"
-qmake6 "$ROOT/tests/tests.pro"
-make -j"$(nproc)"
-QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic QT_STYLE_OVERRIDE=Fusion ./hype-tests "$@"
+
+if command -v qmake6 >/dev/null 2>&1; then
+    QMAKE=qmake6
+elif [ -x /opt/homebrew/opt/qt/bin/qmake6 ]; then
+    QMAKE=/opt/homebrew/opt/qt/bin/qmake6
+else
+    printf '%s\n' 'qmake6 was not found. Install Qt 6 and add its bin directory to PATH.' >&2
+    exit 1
+fi
+
+if command -v nproc >/dev/null 2>&1; then
+    JOBS="$(nproc)"
+else
+    JOBS="$(sysctl -n hw.logicalcpu 2>/dev/null || printf '1')"
+fi
+
+"$QMAKE" "$ROOT/tests/tests.pro"
+make -j"$JOBS"
+if [ -x ./hype-tests.app/Contents/MacOS/hype-tests ]; then
+    TEST_BINARY=./hype-tests.app/Contents/MacOS/hype-tests
+else
+    TEST_BINARY=./hype-tests
+fi
+QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic QT_STYLE_OVERRIDE=Fusion "$TEST_BINARY" "$@"

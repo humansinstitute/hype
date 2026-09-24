@@ -216,3 +216,15 @@ To build Hype yourself, install a C++17 compiler, make, Qt 6.9 or newer, FFmpeg,
 ```
 
 For a launcher entry that rebuilds this checkout when opened, run `./bin/install-dev` and choose **Hype (Development)**.
+
+### macOS
+
+On Apple Silicon macOS, install the build dependencies with Homebrew, then build and install the app for the current user:
+
+```sh
+brew install qt ffmpeg source-highlight webp
+./bin/install-macos
+open "$HOME/Applications/Hype.app"
+```
+
+The installed app still uses `ffmpeg` and `source-highlight` from Homebrew for video export and syntax highlighting. To run the command-line interface directly from the checkout, use `./build/hype.app/Contents/MacOS/hype` after `./bin/build`.

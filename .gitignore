@@ -1,4 +1,5 @@
 /build/
+/tmp/
 /trials/
 *.user
 /pkgbuild/pkg/
