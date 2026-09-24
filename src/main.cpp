@@ -86,8 +86,16 @@ int main(int argc, char **argv) {
             windowless = windowless || argument.startsWith(option);
         windowless = windowless || argument == "-h" || argument == "-v";
     }
-    if (windowless)
+    if (windowless) {
+#ifdef Q_OS_MACOS
+        // Deployed macOS bundles contain the native Cocoa platform plugin only.
+        // Cocoa can run command-only operations without opening a window, and
+        // explicitly selecting it also replaces inherited Linux-only values.
+        qputenv("QT_QPA_PLATFORM", "cocoa");
+#else
         qputenv("QT_QPA_PLATFORM", "offscreen");
+#endif
+    }
     DocumentApplication app(argc, argv);
     app.setApplicationName("Hype");
     app.setOrganizationName("Humans Institute");
