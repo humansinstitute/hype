@@ -228,3 +228,5 @@ open "$HOME/Applications/Hype.app"
 ```
 
 The installed app still uses `ffmpeg` and `source-highlight` from Homebrew for video export and syntax highlighting. To run the command-line interface directly from the checkout, use `./build/hype.app/Contents/MacOS/hype` after `./bin/build`.
+
+`install-macos` applies and verifies a local ad-hoc signature after copying the bundle. This is required because qmake's linker signature does not seal the finished application bundle.

@@ -15,5 +15,11 @@ mkdir -p "$(dirname "$DESTINATION")"
 rm -rf "$DESTINATION"
 ditto "$ROOT/build/hype.app" "$DESTINATION"
 
+# qmake's linker-generated ad-hoc signature does not seal the completed app
+# bundle. Re-sign the installed copy after every file is in place so dyld does
+# not terminate it with CODESIGNING/Invalid Page on launch.
+codesign --force --deep --sign - --timestamp=none "$DESTINATION"
+codesign --verify --deep --strict --verbose=2 "$DESTINATION"
+
 printf 'Installed Hype at %s\n' "$DESTINATION"
 printf 'Launch it with: open %s\n' "$(printf '%s' "$DESTINATION" | sed "s/'/'\\\\''/g; s/^/'/; s/$/'/")"
