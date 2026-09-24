@@ -18,6 +18,9 @@
 #include <QScopeGuard>
 #include <QTimer>
 #include <cstdio>
+#ifdef Q_OS_MACOS
+#include <unistd.h>
+#endif
 // The desktop's interface font, e.g. "Adwaita Sans 11", which the gtk3 platform
 // theme used to supply. Without a settings portal Qt's default font stays.
 static void adoptDesktopFont() {
@@ -40,8 +43,15 @@ int main(int argc, char **argv) {
     qputenv("QT_QPA_PLATFORMTHEME", "generic");
     // Commands, exports and help draw no window, so they must not need a display,
     // even where the desktop exports QT_QPA_PLATFORM=wayland.
-    // Bare hype prints help, as a command line tool should; launchers say hype open.
-    const bool command = argc == 1 || isCliCommand(argv[1]);
+    // Bare hype prints help in a terminal. macOS Launch Services starts an app
+    // bundle without arguments and without a terminal, which should open the
+    // editor just like an explicit `hype open` command.
+#ifdef Q_OS_MACOS
+    const bool appBundleLaunch = argc == 1 && !isatty(STDOUT_FILENO);
+#else
+    const bool appBundleLaunch = false;
+#endif
+    const bool command = (argc == 1 && !appBundleLaunch) || (argc > 1 && isCliCommand(argv[1]));
     bool windowless = command;
     for (int i = 1; i < argc; ++i) {
         const QByteArray argument(argv[i]);
