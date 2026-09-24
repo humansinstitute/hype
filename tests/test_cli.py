@@ -91,7 +91,8 @@ class CliTests(unittest.TestCase):
         self.write(DECK)
         result = json.loads(self.hype('render', self.deck, '--slide', 2, '-o', 'out/two.png', '--width', 640,
                                       '--json').stdout)
-        self.assertEqual(result['image'], str(self.root / 'out/two.png'))
+        # macOS exposes /var through its canonical /private/var path.
+        self.assertEqual(Path(result['image']).resolve(), (self.root / 'out/two.png').resolve())
         self.assertEqual(self.png_size(result['image']), (640, 360))
         self.hype('render', self.deck, '--slide', 3)
         self.assertEqual(self.png_size(self.root / 'slide-003.png'), (1920, 1080))

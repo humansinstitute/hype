@@ -17,11 +17,12 @@ ApplicationWindow {
     // Small controls soften only when the desktop theme rounds its windows.
     readonly property int softRadius: Math.min(3, rounding)
     readonly property bool macOS: Qt.platform.os === "osx"
-    readonly property string commandName: macOS ? "Meta+" : "Ctrl+"
+    // Qt's portable "Ctrl" sequence maps to the Command key on macOS.
+    readonly property string commandName: "Ctrl+"
     readonly property string commandLabel: macOS ? "⌘" : "Ctrl+"
-    readonly property string overviewShortcut: macOS ? "Meta+Alt+O" : "Ctrl+M"
-    readonly property string sourceShortcut: macOS ? "Meta+Alt+M" : "Ctrl+."
-    readonly property string presentShortcut: macOS ? "Meta+Shift+P" : "Ctrl+Space"
+    readonly property string overviewShortcut: macOS ? "Ctrl+Alt+O" : "Ctrl+M"
+    readonly property string sourceShortcut: macOS ? "Ctrl+Alt+M" : "Ctrl+."
+    readonly property string presentShortcut: macOS ? "Ctrl+Shift+P" : "Ctrl+Space"
     readonly property string moveModifier: macOS ? "Alt+" : "Ctrl+"
     color: presenting ? ui.background : ui.panel
     palette.window: win.ui.panel; palette.base: win.ui.background; palette.text: win.ui.foreground
@@ -68,12 +69,6 @@ ApplicationWindow {
     property real dragX: 0
     property int dragScroll: 0
     menuBar: MenuBar {
-        Menu {
-            title: qsTr("Hype")
-            MenuItem { text: qsTr("About Hype"); onTriggered: aboutDialog.open() }
-            MenuSeparator {}
-            MenuItem { text: qsTr("Quit Hype"); onTriggered: win.close() }
-        }
         Menu {
             title: qsTr("File")
             MenuItem { text: qsTr("New Presentation"); onTriggered: deck.newDeck() }
@@ -149,7 +144,7 @@ ApplicationWindow {
             event.accepted = true
             return
         }
-        let control = event.modifiers & (win.macOS ? Qt.MetaModifier : Qt.ControlModifier)
+        let control = event.modifiers & Qt.ControlModifier
         if (!win.markdown && editor === slideEditor && event.modifiers === Qt.NoModifier &&
             (event.key === Qt.Key_Home || event.key === Qt.Key_End)) {
             event.accepted = true
@@ -477,8 +472,8 @@ ApplicationWindow {
     Shortcut { sequences: [StandardKey.Bold]; enabled: win.canFormat; onActivated: win.formatSlide("bold") }
     Shortcut { sequences: [StandardKey.Italic]; enabled: win.canFormat; onActivated: win.formatSlide("italic") }
     Shortcut { sequences: [StandardKey.Underline]; enabled: win.canFormat; onActivated: win.formatSlide("underline") }
-    Shortcut { sequence: win.macOS ? "Meta+Shift+H" : "Ctrl+H"; enabled: win.canFormat; onActivated: win.formatSlide("headline") }
-    Shortcut { sequence: win.macOS ? "Meta+Shift+K" : "Ctrl+K"; enabled: win.canFormat; onActivated: win.formatSlide("code") }
+    Shortcut { sequence: win.macOS ? "Ctrl+Shift+H" : "Ctrl+H"; enabled: win.canFormat; onActivated: win.formatSlide("headline") }
+    Shortcut { sequence: win.macOS ? "Ctrl+Shift+K" : "Ctrl+K"; enabled: win.canFormat; onActivated: win.formatSlide("code") }
     Shortcut { sequence: win.commandName + "/"; enabled: win.canFormat; onActivated: win.formatSlide("comment") }
     Shortcut { sequences: ["Return", "Enter"]; enabled: !win.popupOpen && !deck.compressingImage && win.overview && !win.presenting; onActivated: win.focusMarkdown() }
     Shortcut { enabled: !win.popupOpen && !deck.compressingImage; sequences: [StandardKey.New]; onActivated: deck.newDeck() }

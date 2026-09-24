@@ -18,6 +18,10 @@
 #include <QScopeGuard>
 #include <QTimer>
 #include <QFileOpenEvent>
+#include <QAction>
+#include <QMenu>
+#include <QMenuBar>
+#include <QMessageBox>
 #include <cstdio>
 #include <functional>
 #ifdef Q_OS_MACOS
@@ -82,10 +86,8 @@ int main(int argc, char **argv) {
             windowless = windowless || argument.startsWith(option);
         windowless = windowless || argument == "-h" || argument == "-v";
     }
-#ifndef Q_OS_MACOS
     if (windowless)
         qputenv("QT_QPA_PLATFORM", "offscreen");
-#endif
     DocumentApplication app(argc, argv);
     app.setApplicationName("Hype");
     app.setOrganizationName("Humans Institute");
@@ -205,6 +207,23 @@ int main(int argc, char **argv) {
     };
     QObject::connect(&deck, &Deck::changed, &app, updateWindowDocument);
     updateWindowDocument();
+#ifdef Q_OS_MACOS
+    // Qt Quick Controls does not expose QAction::menuRole. A native menu bar
+    // supplies the canonical application menu roles and routes Command-Q
+    // through QQuickWindow::close(), preserving the QML unsaved-close guard.
+    auto nativeMenuBar = new QMenuBar;
+    nativeMenuBar->setNativeMenuBar(true);
+    auto applicationMenu = nativeMenuBar->addMenu("Hype");
+    auto about = applicationMenu->addAction("About Hype");
+    about->setMenuRole(QAction::AboutRole);
+    QObject::connect(about, &QAction::triggered, &app, [] {
+        QMessageBox::about(nullptr, "About Hype", "Hype 0.4.1\nSimple presentations, written in Markdown.");
+    });
+    auto quit = applicationMenu->addAction("Quit Hype");
+    quit->setMenuRole(QAction::QuitRole);
+    quit->setShortcut(QKeySequence::Quit);
+    QObject::connect(quit, &QAction::triggered, window, &QWindow::close);
+#endif
     if (args.isSet("markdown"))
         QMetaObject::invokeMethod(engine.rootObjects().first(), "openMarkdown");
     if (args.isSet("overview"))

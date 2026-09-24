@@ -423,6 +423,20 @@ static QString slideProperty(const QString &source, const QString &key) {
 }
 static QString preserveLineBreaks(QString markdown) {
     markdown.replace("\r\n", "\n").replace('\r', '\n');
+    // Hype deliberately reserves underscores for underline while asterisks
+    // remain Markdown emphasis. Qt 6.11 standardized both markers as italic,
+    // so express Hype's dialect explicitly before handing text to Qt.
+    const QRegularExpression underline(R"((?<![\w\\])_([^_\n]+)_(?!\w))");
+    const QRegularExpression strike(R"(~~([^~\n]+)~~)");
+    const QStringList codeMasked = outsideCode(markdown, false).split('\n');
+    QStringList dialectLines = markdown.split('\n');
+    for (int i = 0; i < dialectLines.size(); ++i) {
+        if (i < codeMasked.size() && codeMasked[i].contains(underline))
+            dialectLines[i].replace(underline, "<u>\\1</u>");
+        if (i < codeMasked.size() && codeMasked[i].contains(strike))
+            dialectLines[i].replace(strike, "<s>\\1</s>");
+    }
+    markdown = dialectLines.join('\n');
     const QStringList visible = outsideCode(markdown, false).split('\n');
     QStringList lines = markdown.split('\n');
     for (int i = 0; i + 1 < lines.size(); ++i) {
